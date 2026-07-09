@@ -1,0 +1,14 @@
+{
+  "name": "Beriyu — Kopi & Dapur",
+  "short_name": "Beriyu",
+  "description": "Pesan kopi & makanan Cafe Beriyu, diantar sampai pintu.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f1e7",
+  "theme_color": "#c4155f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

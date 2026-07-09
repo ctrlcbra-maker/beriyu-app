@@ -1,0 +1,10 @@
+{
+  "name": "beriyu-app",
+  "version": "1.0.0",
+  "description": "PWA pemesanan makanan Cafe Beriyu — Supabase + Vercel + checkout WhatsApp",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve public",
+    "start": "npx serve public"
+  }
+}
