@@ -119,9 +119,12 @@ const DEMO_PESANAN = [];
 
 export async function simpanPesanan(order) {
   if (MODE_DEMO) { const row = { ...order, id: Date.now() }; DEMO_PESANAN.unshift(row); return row; }
-  const { data, error } = await sb.from('pesanan').insert(order).select().single();
+  // tidak pakai .select() — publik tidak diberi izin SELECT ke tabel pesanan (lihat schema.sql),
+  // dan RETURNING pada insert ikut tunduk pada policy SELECT itu; kalau dipaksa, seluruh insert
+  // ditolak & di-rollback oleh RLS meski WITH CHECK insert-nya sendiri lolos.
+  const { error } = await sb.from('pesanan').insert(order);
   if (error) throw error;
-  return data;
+  return order;
 }
 
 // ---------- admin: lihat & ubah status pesanan ----------

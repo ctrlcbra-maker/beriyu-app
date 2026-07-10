@@ -12,6 +12,18 @@ const RIWAYAT_KEY = 'beriyu_riwayat';
 let MENU = [], PROMO = [], PESANAN_ADMIN = [];
 let cart = {}, metode = 'antar', voucherAktif = null, riwayat = [], katAktif = 'Semua';
 let dashDari = null, dashSampai = null;
+let pesananInterval = null;
+
+function mulaiPollingPesanan(){
+  if(pesananInterval) return;
+  pesananInterval = setInterval(()=>{
+    if(document.visibilityState==='visible' && !$('adminPanel').classList.contains('hidden')) refreshPesananAdmin();
+  }, 30000);
+}
+function hentikanPollingPesanan(){
+  clearInterval(pesananInterval);
+  pesananInterval = null;
+}
 let detailQty = 1, detailId = null, editId = null, tmpFoto = null, tmpKat = 'Kopi', tmpFotoFile = null;
 
 const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID');
@@ -48,7 +60,7 @@ async function boot(){
   if(DB.MODE_DEMO) $('demoBanner').classList.remove('hidden');
 
   const sesi = await DB.cekSesi();
-  if(sesi){ $('adminLogin').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); }
+  if(sesi){ $('adminLogin').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); mulaiPollingPesanan(); }
 
   muatRiwayatLokal();
   MENU = await DB.getMenu();
@@ -277,14 +289,14 @@ window.loginAdminUI=async function(){
   const btn=$('btnLoginAdmin');btn.disabled=true;btn.textContent='Masuk…';
   try{
     await DB.loginAdmin(email,pass);
-    $('adminLogin').classList.add('hidden');$('adminPanel').classList.remove('hidden');renderAdmin();
+    $('adminLogin').classList.add('hidden');$('adminPanel').classList.remove('hidden');renderAdmin();mulaiPollingPesanan();
   }catch(e){
     toast(DB.MODE_DEMO?'Login butuh Supabase aktif, bukan mode demo':'Email/password salah');
   }finally{
     if(btn){btn.disabled=false;btn.textContent='Masuk';}
   }
 };
-window.logoutAdmin=async function(){await DB.logoutAdmin();$('adminPanel').classList.add('hidden');$('adminLogin').classList.remove('hidden');$('adminEmail').value='';$('adminPass').value='';};
+window.logoutAdmin=async function(){await DB.logoutAdmin();hentikanPollingPesanan();$('adminPanel').classList.add('hidden');$('adminLogin').classList.remove('hidden');$('adminEmail').value='';$('adminPass').value='';};
 
 function renderAdmin(){
   $('stMenu').textContent=MENU.filter(m=>m.aktif).length;
