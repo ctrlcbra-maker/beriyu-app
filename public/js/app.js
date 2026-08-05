@@ -13,7 +13,7 @@ let MENU = [], PROMO = [], PESANAN_ADMIN = [];
 let cart = {}, metode = 'antar', voucherAktif = null, riwayat = [], katAktif = 'Semua';
 let dashDari = null, dashSampai = null;
 let settings = { ongkir: CONFIG.ONGKIR, minGratisOngkir: CONFIG.MIN_GRATIS_ONGKIR };
-let kasirItems = [], kasirMetode = 'antar', kasirBayarMetode = 'tunai', kasirTunaiBayar = '', kasirCatatan = '';
+let kasirItems = [], kasirMetode = 'antar', kasirBayarMetode = 'tunai', kasirTunaiBayar = '', kasirCatatan = '', kasirSearch = '';
 let pesananInterval = null;
 
 function mulaiPollingPesanan(){
@@ -97,48 +97,46 @@ function kasirOngkir(){ return kasirMetode === 'antar' ? settings.ongkir : 0; }
 function kasirTotal(){ return Math.max(0, kasirSubtotal() + kasirOngkir()); }
 function renderKasir(){
   const el = $('admKasirArea'); if(!el) return;
-  const aktifMenu = MENU.filter(m=>m.aktif);
+  const aktifMenu = MENU.filter(m=>m.aktif && m.nama.toLowerCase().includes(kasirSearch.toLowerCase()));
   const itemsHtml = kasirItems.length ? kasirItems.map((item,idx)=>`
       <div class="kasir-item">
         <div class="info"><b>${item.nama}</b><div class="kap">${item.qty}× ${rp(item.harga)} = ${rp(item.qty * item.harga)}</div></div>
         <div class="qty"><button data-kqty="${idx}|-1">−</button><span>${item.qty}</span><button data-kqty="${idx}|1">+</button><button data-krem="${idx}">✕</button></div>
       </div>`).join('') : '<div class="kosong"><div class="em">🧾</div><p>Keranjang kasir kosong.<br>Pilih produk atau input manual.</p></div>';
   el.innerHTML = `
-    <div class="kasir-grid">
-      <div class="kasir-panel">
-        <div class="section-title">Pilih produk cepat</div>
-        ${aktifMenu.length ? aktifMenu.map(m=>`
-          <div class="kasir-produk"><div><b>${m.nama}</b><div class="kap">${rp(hargaFinal(m))}</div></div><button class="btn icon" data-kadd="${m.id}">+</button></div>`).join('') : '<div class="kosong"><p>Belum ada menu aktif.</p></div>'}
-        <div class="section-title" style="margin-top:16px">Input manual item</div>
-        <div class="f-row"><input class="inp" id="kasirManualNama" placeholder="Nama item"></div>
-        <div class="f-row"><input class="inp" id="kasirManualHarga" inputmode="numeric" placeholder="Harga (Rp)"></div>
-        <div class="f-row"><input class="inp" id="kasirManualQty" inputmode="numeric" placeholder="Qty" value="1"></div>
-        <div class="kasir-actions"><button class="btn" id="kasirAddManual">Tambah manual</button></div>
+    <div class="kasir-panel">
+      <div class="section-title">Ringkasan kasir</div>
+      <div class="kasir-cart">${itemsHtml}</div>
+      <div class="kasir-summary">
+        <div class="row"><span>Subtotal</span><span>${rp(kasirSubtotal())}</span></div>
+        <div class="row"><span>Ongkir</span><span>${rp(kasirOngkir())}</span></div>
+        <div class="row total"><span>Total</span><span>${rp(kasirTotal())}</span></div>
       </div>
-      <div class="kasir-panel">
-        <div class="section-title">Ringkasan kasir</div>
-        <div class="kasir-cart">${itemsHtml}</div>
-        <div class="kasir-summary">
-          <div class="row"><span>Subtotal</span><span>${rp(kasirSubtotal())}</span></div>
-          <div class="row"><span>Ongkir</span><span>${rp(kasirOngkir())}</span></div>
-          <div class="row total"><span>Total</span><span>${rp(kasirTotal())}</span></div>
-        </div>
-        <div class="section-title">Metode pesanan</div>
-        <div class="seg"><button class="s ${kasirMetode==='antar'?'on':''}" data-km="antar">Antar</button><button class="s ${kasirMetode==='ambil'?'on':''}" data-km="ambil">Ambil</button></div>
-        <div class="section-title">Pembayaran</div>
-        <div class="seg"><button class="s ${kasirBayarMetode==='tunai'?'on':''}" data-kpay="tunai">Tunai</button><button class="s ${kasirBayarMetode==='debit'?'on':''}" data-kpay="debit">Debit/QR</button></div>
-        <div class="f-row"><input class="inp" id="kasirNama" placeholder="Nama pelanggan"></div>
-        <div class="f-row"><input class="inp" id="kasirHp" placeholder="No. WA (opsional)"></div>
-        <div class="f-row"><input class="inp" id="kasirAlamat" placeholder="Alamat (jika antar)" ${kasirMetode==='antar'?'':'disabled'}></div>
-        <div class="f-row"><textarea class="inp" id="kasirCatatan" placeholder="Catatan / keterangan"></textarea></div>
-        <div class="kasir-actions"><button class="btn kayu" id="kasirCheckout">Simpan pesanan kasir</button></div>
-      </div>
+      <div class="section-title">Cari produk cepat</div>
+      <div class="f-row kasir-search-wrap"><span class="kasir-search-icon">🔍</span><input class="inp kasir-search" id="kasirCariProduk" placeholder="Cari nama produk..." value="${kasirSearch}"></div>
+      ${aktifMenu.length ? aktifMenu.map(m=>`
+        <div class="kasir-produk"><div><b>${m.nama}</b><div class="kap">${rp(hargaFinal(m))}</div></div><button class="btn icon" data-kadd="${m.id}">+</button></div>`).join('') : '<div class="kosong"><p>Produk tidak ditemukan.</p></div>'}
+      <div class="section-title" style="margin-top:16px">Input manual item</div>
+      <div class="f-row"><input class="inp" id="kasirManualNama" placeholder="Nama item"></div>
+      <div class="f-row"><input class="inp" id="kasirManualHarga" inputmode="numeric" placeholder="Harga (Rp)"></div>
+      <div class="f-row"><input class="inp" id="kasirManualQty" inputmode="numeric" placeholder="Qty" value="1"></div>
+      <div class="kasir-actions"><button class="btn" id="kasirAddManual">Tambah manual</button></div>
+      <div class="section-title" style="margin-top:16px">Metode pesanan</div>
+      <div class="seg"><button class="s ${kasirMetode==='antar'?'on':''}" data-km="antar">Antar</button><button class="s ${kasirMetode==='ambil'?'on':''}" data-km="ambil">Ambil</button></div>
+      <div class="section-title">Pembayaran</div>
+      <div class="seg"><button class="s ${kasirBayarMetode==='tunai'?'on':''}" data-kpay="tunai">Tunai</button><button class="s ${kasirBayarMetode==='debit'?'on':''}" data-kpay="debit">Debit/QR</button></div>
+      <div class="f-row"><input class="inp" id="kasirNama" placeholder="Nama pelanggan"></div>
+      <div class="f-row"><input class="inp" id="kasirHp" placeholder="No. WA (opsional)"></div>
+      <div class="f-row"><input class="inp" id="kasirAlamat" placeholder="Alamat (jika antar)" ${kasirMetode==='antar'?'':'disabled'}></div>
+      <div class="f-row"><textarea class="inp" id="kasirCatatan" placeholder="Catatan / keterangan"></textarea></div>
+      <div class="kasir-actions"><button class="btn kayu" id="kasirCheckout">Simpan pesanan kasir</button></div>
     </div>`;
   document.querySelectorAll('[data-kadd]').forEach(b=>b.onclick=()=>kasirAddItem(+b.dataset.kadd));
   document.querySelectorAll('[data-kqty]').forEach(b=>{const [idx,delta]=b.dataset.kqty.split('|');b.onclick=()=>kasirUpdateQty(+idx,+delta);});
   document.querySelectorAll('[data-krem]').forEach(b=>b.onclick=()=>kasirRemoveItem(+b.dataset.krem));
   document.querySelectorAll('[data-km]').forEach(b=>b.onclick=()=>{kasirMetode=b.dataset.km;renderKasir();});
   document.querySelectorAll('[data-kpay]').forEach(b=>b.onclick=()=>{kasirBayarMetode=b.dataset.kpay;renderKasir();});
+  if($('kasirCariProduk')) $('kasirCariProduk').oninput = e => { kasirSearch = e.target.value; renderKasir(); };
   if($('kasirAddManual')) $('kasirAddManual').onclick=kasirAddManualItem;
   if($('kasirCheckout')) $('kasirCheckout').onclick=kasirSaveOrder;
 }
