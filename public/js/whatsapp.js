@@ -76,3 +76,18 @@ export function beritahuBatalKeWhatsApp(order, alasan) {
   window.open(url, '_blank');
   return url;
 }
+
+export function tolakKeWhatsApp(order, alasan) {
+  const L = [];
+  L.push(`*Pesanan Ditolak — ${CONFIG.NAMA_KAFE}*`);
+  L.push(`Kode: *${order.kode}*`);
+  L.push(`Halo ${order.nama}, mohon maaf pesananmu tidak dapat kami proses.`);
+  if (alasan) L.push(`Alasan: ${alasan}`);
+  L.push('');
+  L.push('Silakan hubungi kami kembali jika ingin memesan lain.');
+
+  const teks = encodeURIComponent(L.join('\n'));
+  const url = `https://wa.me/${normalisasiNomor(order.hp)}?text=${teks}`;
+  window.open(url, '_blank');
+  return url;
+}

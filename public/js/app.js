@@ -3,7 +3,7 @@
 // ============================================================
 import { CONFIG } from './config.js';
 import * as DB from './db.js';
-import { pesanKeWhatsApp, batalkanKeWhatsApp, beritahuBatalKeWhatsApp } from './whatsapp.js';
+import { pesanKeWhatsApp, batalkanKeWhatsApp, beritahuBatalKeWhatsApp, tolakKeWhatsApp } from './whatsapp.js';
 
 const KATEGORI = ['Semua','Kopi','Non-Kopi','Makanan Berat','Camilan'];
 const EMOJI_OPS = ['☕','🍵','🥤','🧋','🍗','🍜','🍛','🍟','🍌','🧁','🥐','🍰'];
@@ -12,6 +12,8 @@ const RIWAYAT_KEY = 'beriyu_riwayat';
 let MENU = [], PROMO = [], PESANAN_ADMIN = [];
 let cart = {}, metode = 'antar', voucherAktif = null, riwayat = [], katAktif = 'Semua';
 let dashDari = null, dashSampai = null;
+let settings = { ongkir: CONFIG.ONGKIR, minGratisOngkir: CONFIG.MIN_GRATIS_ONGKIR };
+let kasirItems = [], kasirMetode = 'antar', kasirBayarMetode = 'tunai', kasirTunaiBayar = '', kasirCatatan = '';
 let pesananInterval = null;
 
 function mulaiPollingPesanan(){
@@ -29,6 +31,18 @@ let detailQty = 1, detailId = null, editId = null, tmpFoto = null, tmpKat = 'Kop
 const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID');
 const $ = id => document.getElementById(id);
 const hargaFinal = m => (m.promo && m.promo > 0) ? m.promo : m.harga;
+const normalizeStatus = s => String(s || '').trim().toLowerCase();
+const formatStatus = s => {
+  switch (normalizeStatus(s)) {
+    case 'diproses': return 'Diproses';
+    case 'disiapkan': return 'Disiapkan';
+    case 'siap': return 'Siap';
+    case 'selesai': return 'Selesai';
+    case 'ditolak': return 'Ditolak';
+    case 'dibatalkan': return 'Dibatalkan';
+    default: return String(s || '-');
+  }
+};
 
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1800);}
 
@@ -41,9 +55,140 @@ function muatRiwayatLokal(){
   }catch(e){riwayat=[];}
 }
 function simpanRiwayatLokal(){try{localStorage.setItem(RIWAYAT_KEY,JSON.stringify(riwayat));}catch(e){}}
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem('beriyu_settings');
+    if (raw){
+      const stored = JSON.parse(raw);
+      settings.ongkir = Number(stored.ongkir) || CONFIG.ONGKIR;
+      settings.minGratisOngkir = Number(stored.minGratisOngkir) || CONFIG.MIN_GRATIS_ONGKIR;
+    }
+  }catch(e){ }
+}
+function saveSettings(){
+  try{ localStorage.setItem('beriyu_settings', JSON.stringify(settings)); }catch(e){}
+}
+function renderOngkirSettings(){
+  const el = $('admOngkirArea'); if(!el) return;
+  el.innerHTML = `
+    <div class="kasir-panel">
+      <div class="section-title">Setelan ongkir</div>
+      <div class="f-row"><input class="inp" id="oOngkir" inputmode="numeric" placeholder="Ongkir" value="${settings.ongkir}"></div>
+      <div class="f-row"><input class="inp" id="oMinGratis" inputmode="numeric" placeholder="Minimal gratis ongkir" value="${settings.minGratisOngkir}"></div>
+      <div class="kasir-actions"><button class="btn kayu" id="simpanOngkir">Simpan setelan</button></div>
+      <p class="hint" style="padding-top:8px;">Nilai ongkir ini akan dipakai pada checkout publik dan kasir. Gratis ongkir berlaku saat kode ONGKIRGRATIS aktif dan subtotal memenuhi minimal.</p>
+    </div>`;
+  $('simpanOngkir').onclick = handleOngkirSave;
+}
+function handleOngkirSave(){
+  const ongkirVal = parseInt($('oOngkir').value) || 0;
+  const minGratisVal = parseInt($('oMinGratis').value) || 0;
+  if (ongkirVal < 0 || minGratisVal < 0){ toast('Nilai tidak boleh negatif'); return; }
+  settings.ongkir = ongkirVal;
+  settings.minGratisOngkir = minGratisVal;
+  saveSettings();
+  renderOngkirSettings();
+  renderCart();
+  renderKasir();
+  toast('Setelan ongkir disimpan ✓');
+}
+function kasirSubtotal(){ return kasirItems.reduce((s,i)=>s + i.qty * i.harga, 0); }
+function kasirOngkir(){ return kasirMetode === 'antar' ? settings.ongkir : 0; }
+function kasirTotal(){ return Math.max(0, kasirSubtotal() + kasirOngkir()); }
+function renderKasir(){
+  const el = $('admKasirArea'); if(!el) return;
+  const aktifMenu = MENU.filter(m=>m.aktif);
+  const itemsHtml = kasirItems.length ? kasirItems.map((item,idx)=>`
+      <div class="kasir-item">
+        <div class="info"><b>${item.nama}</b><div class="kap">${item.qty}× ${rp(item.harga)} = ${rp(item.qty * item.harga)}</div></div>
+        <div class="qty"><button data-kqty="${idx}|-1">−</button><span>${item.qty}</span><button data-kqty="${idx}|1">+</button><button data-krem="${idx}">✕</button></div>
+      </div>`).join('') : '<div class="kosong"><div class="em">🧾</div><p>Keranjang kasir kosong.<br>Pilih produk atau input manual.</p></div>';
+  el.innerHTML = `
+    <div class="kasir-grid">
+      <div class="kasir-panel">
+        <div class="section-title">Pilih produk cepat</div>
+        ${aktifMenu.length ? aktifMenu.map(m=>`
+          <div class="kasir-produk"><div><b>${m.nama}</b><div class="kap">${rp(hargaFinal(m))}</div></div><button data-kadd="${m.id}">Tambah</button></div>`).join('') : '<div class="kosong"><p>Belum ada menu aktif.</p></div>'}
+        <div class="section-title" style="margin-top:16px">Input manual item</div>
+        <div class="f-row"><input class="inp" id="kasirManualNama" placeholder="Nama item"></div>
+        <div class="f-row"><input class="inp" id="kasirManualHarga" inputmode="numeric" placeholder="Harga (Rp)"></div>
+        <div class="f-row"><input class="inp" id="kasirManualQty" inputmode="numeric" placeholder="Qty" value="1"></div>
+        <div class="kasir-actions"><button class="btn" id="kasirAddManual">Tambah manual</button></div>
+      </div>
+      <div class="kasir-panel">
+        <div class="section-title">Ringkasan kasir</div>
+        <div class="kasir-cart">${itemsHtml}</div>
+        <div class="kasir-summary">
+          <div class="row"><span>Subtotal</span><span>${rp(kasirSubtotal())}</span></div>
+          <div class="row"><span>Ongkir</span><span>${rp(kasirOngkir())}</span></div>
+          <div class="row total"><span>Total</span><span>${rp(kasirTotal())}</span></div>
+        </div>
+        <div class="section-title">Metode pesanan</div>
+        <div class="seg"><button class="s ${kasirMetode==='antar'?'on':''}" data-km="antar">Antar</button><button class="s ${kasirMetode==='ambil'?'on':''}" data-km="ambil">Ambil</button></div>
+        <div class="section-title">Pembayaran</div>
+        <div class="seg"><button class="s ${kasirBayarMetode==='tunai'?'on':''}" data-kpay="tunai">Tunai</button><button class="s ${kasirBayarMetode==='debit'?'on':''}" data-kpay="debit">Debit/QR</button></div>
+        <div class="f-row"><input class="inp" id="kasirNama" placeholder="Nama pelanggan"></div>
+        <div class="f-row"><input class="inp" id="kasirHp" placeholder="No. WA (opsional)"></div>
+        <div class="f-row"><input class="inp" id="kasirAlamat" placeholder="Alamat (jika antar)" ${kasirMetode==='antar'?'':'disabled'}></div>
+        <div class="f-row"><textarea class="inp" id="kasirCatatan" placeholder="Catatan / keterangan"></textarea></div>
+        <div class="kasir-actions"><button class="btn kayu" id="kasirCheckout">Simpan pesanan kasir</button></div>
+      </div>
+    </div>`;
+  document.querySelectorAll('[data-kadd]').forEach(b=>b.onclick=()=>kasirAddItem(+b.dataset.kadd));
+  document.querySelectorAll('[data-kqty]').forEach(b=>{const [idx,delta]=b.dataset.kqty.split('|');b.onclick=()=>kasirUpdateQty(+idx,+delta);});
+  document.querySelectorAll('[data-krem]').forEach(b=>b.onclick=()=>kasirRemoveItem(+b.dataset.krem));
+  document.querySelectorAll('[data-km]').forEach(b=>b.onclick=()=>{kasirMetode=b.dataset.km;renderKasir();});
+  document.querySelectorAll('[data-kpay]').forEach(b=>b.onclick=()=>{kasirBayarMetode=b.dataset.kpay;renderKasir();});
+  if($('kasirAddManual')) $('kasirAddManual').onclick=kasirAddManualItem;
+  if($('kasirCheckout')) $('kasirCheckout').onclick=kasirSaveOrder;
+}
+function kasirAddItem(id){
+  const m=MENU.find(x=>x.id===id); if(!m) return;
+  const idx = kasirItems.findIndex(x=>x.id===id && x.harga===hargaFinal(m));
+  if(idx > -1) kasirItems[idx].qty += 1;
+  else kasirItems.push({id:m.id,nama:m.nama,harga:hargaFinal(m),qty:1});
+  renderKasir();
+}
+function kasirAddManualItem(){
+  const nama=($('kasirManualNama').value||'').trim();
+  const harga=parseInt($('kasirManualHarga').value)||0;
+  const qty=parseInt($('kasirManualQty').value)||1;
+  if(!nama||!harga||qty<1){toast('Isi nama, harga, dan qty dengan benar');return;}
+  kasirItems.push({id:Date.now(),nama,harga,qty});
+  $('kasirManualNama').value='';$('kasirManualHarga').value='';$('kasirManualQty').value='1';
+  renderKasir();
+}
+function kasirUpdateQty(idx,delta){ if(!kasirItems[idx]) return; kasirItems[idx].qty = Math.max(1, kasirItems[idx].qty + delta); renderKasir(); }
+function kasirRemoveItem(idx){ kasirItems.splice(idx,1); renderKasir(); }
+function kasirReset(){ kasirItems=[]; kasirMetode='antar'; kasirBayarMetode='tunai'; kasirTunaiBayar=''; kasirCatatan=''; }
+async function kasirSaveOrder(){
+  if(!kasirItems.length){toast('Keranjang kasir masih kosong');return;}
+  const nama=($('kasirNama').value||'').trim();
+  const hp=($('kasirHp').value||'').trim();
+  const alamat=($('kasirAlamat').value||'').trim();
+  const catatan=($('kasirCatatan').value||'').trim();
+  if(kasirMetode==='antar' && !alamat){toast('Alamat antar harus diisi');return;}
+  if(!nama){toast('Isi nama pelanggan');return;}
+  const kode='BRY-'+Math.floor(1000+Math.random()*9000);
+  const order={
+    kode,
+    items:kasirItems.map(i=>({nama:i.nama,qty:i.qty,harga:i.harga})),
+    subtotal:kasirSubtotal(), diskon:0, ongkir:kasirOngkir(), total:kasirTotal(),
+    metode:kasirMetode, nama, hp, alamat,
+    catatan:catatan?`${kasirBayarMetode.toUpperCase()} · ${catatan}`:kasirBayarMetode.toUpperCase(),
+    status:'Diproses', waktu:new Date().toISOString(),
+  };
+  try{
+    await DB.simpanPesanan(order);
+    toast('Pesanan kasir tersimpan ✓');
+    kasirReset(); renderKasir();
+    if($('adminPanel') && !$('adminPanel').classList.contains('hidden')) await refreshPesananAdmin();
+  }catch(e){toast('Gagal simpan pesanan kasir'); console.error(e);}  
+}
 
 // tampilkan foto: gambar asli jika ada foto_url, jika tidak emoji di atas latar hangat
 function fotoBox(m, cls=''){
+
   if(m.foto_url){
     return `<div class="${cls}" style="width:100%;height:100%"><img src="${m.foto_url}" alt="${m.nama}"></div>`;
   }
@@ -58,6 +203,7 @@ async function boot(){
 
   DB.initSupabase();
   if(DB.MODE_DEMO) $('demoBanner').classList.remove('hidden');
+  loadSettings();
 
   const sesi = await DB.cekSesi();
   if(sesi){ $('adminLogin').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); mulaiPollingPesanan(); }
@@ -78,6 +224,7 @@ window.pindah = function(tab){
   updateFab();
   if(tab==='pesanan') renderRiwayat();
   if(tab==='admin' && !$('adminPanel').classList.contains('hidden')) refreshPesananAdmin();
+  renderKasir();
   window.scrollTo(0,0);
 };
 
@@ -151,7 +298,7 @@ function updateFab(){
   fab.classList.toggle('sembunyi',n===0||!diPublik);
   $('fabN').textContent=n;$('fabRp').textContent=rp(subtotal());
 }
-const ongkir=()=>{if(metode!=='antar')return 0;return(voucherAktif&&voucherAktif.kode==='ONGKIRGRATIS'&&subtotal()>=CONFIG.MIN_GRATIS_ONGKIR)?0:CONFIG.ONGKIR;};
+const ongkir=()=>{if(metode!=='antar')return 0;return(voucherAktif&&voucherAktif.kode==='ONGKIRGRATIS'&&subtotal()>=settings.minGratisOngkir)?0:settings.ongkir;};
 const diskonVoucher=()=>{if(voucherAktif&&voucherAktif.kode==='SORE20')return Math.round(subtotal()*0.2);return 0;};
 const grandTotal=()=>Math.max(0,subtotal()-diskonVoucher()+ongkir());
 
@@ -167,7 +314,7 @@ function renderCart(){
   $('cartKonten').innerHTML=`
     <div class="sect-judul" style="padding:8px 16px 4px">Keranjang <em>${totalItem()} item</em></div>${items}
     <div class="opsi"><h4>Metode pesanan</h4><div class="pilih">
-      <div class="p ${metode==='antar'?'on':''}" data-m="antar"><div class="ic">🛵</div><div class="lb">Antar</div><div class="sub">Ongkir ${rp(CONFIG.ONGKIR)}</div></div>
+      <div class="p ${metode==='antar'?'on':''}" data-m="antar"><div class="ic">🛵</div><div class="lb">Antar</div><div class="sub">Ongkir ${rp(settings.ongkir)}</div></div>
       <div class="p ${metode==='ambil'?'on':''}" data-m="ambil"><div class="ic">🏃</div><div class="lb">Ambil</div><div class="sub">Di kafe</div></div>
     </div></div>
     <div id="formAntar"></div>
@@ -281,6 +428,41 @@ function bukaFormBatal(order, onKonfirmasi){
   bukaSheet('sheetForm');
 }
 
+function bukaFormTolak(order, onKonfirmasi){
+  $('formKonten').innerHTML=`
+    <div class="sect-judul" style="padding:8px 16px 4px">Tolak pesanan ${order.kode}</div>
+    <div style="padding:0 16px">
+      <div class="f-label">Alasan penolakan</div>
+      <textarea class="inp" id="alasanTolak" placeholder="cth. Bahan habis / menu tidak tersedia / jadwal penuh"></textarea>
+      <button class="btn" id="konfirmasiTolak" style="background:#d35400">Tolak & kirim WhatsApp</button>
+    </div>`;
+  $('konfirmasiTolak').onclick=async()=>{
+    const alasan=$('alasanTolak').value.trim();
+    tutupSemua();
+    await onKonfirmasi(alasan);
+  };
+  bukaSheet('sheetForm');
+}
+
+function renderPesananHistori(){
+  const el=$('admPesananHistori'); if(!el) return;
+  const histori = PESANAN_ADMIN.filter(o=>['dibatalkan','ditolak'].includes(normalizeStatus(o.status)));
+  if(!histori.length){
+    el.innerHTML = `<div class="kosong" style="padding:30px 20px"><div class="em">📦</div><p>Belum ada pesanan batal atau ditolak.</p></div>`;
+    return;
+  }
+  el.innerHTML = histori.map(o=>{
+    const w=new Date(o.waktu);
+    return `<div class="pesanan-item histori">
+      <div class="pi-head"><b>${o.kode}</b><span class="status-pill status-${o.status}">${o.status}</span></div>
+      <div class="pi-info">${o.nama||'-'} · ${o.hp||'-'} · ${o.metode==='antar'?'Diantar':'Ambil'}</div>
+      <div class="pi-items">${(o.items||[]).map(i=>i.qty+'× '+i.nama).join(' · ')}</div>
+      <div class="pi-total">${rp(o.total)}</div>
+      <div class="pi-meta">${w.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})} ${w.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`;
+  }).join('');
+}
+
 // ===================== ADMIN =====================
 window.loginAdminUI=async function(){
   const email=($('adminEmail').value||'').trim();
@@ -301,6 +483,8 @@ window.logoutAdmin=async function(){await DB.logoutAdmin();hentikanPollingPesana
 function renderAdmin(){
   $('stMenu').textContent=MENU.filter(m=>m.aktif).length;
   $('stPromo').textContent=PROMO.filter(p=>p.aktif).length;
+  renderKasir();
+  renderOngkirSettings();
   refreshPesananAdmin();
   $('admMenuList').innerHTML=MENU.map(m=>`
     <div class="adm-item"><div class="af">${fotoBox(m)}</div>
@@ -322,9 +506,10 @@ function renderAdmin(){
 // ---- pesanan (admin) ----
 window.refreshPesananAdmin=async function(){
   await DB.hapusPesananLama();
-  PESANAN_ADMIN = await DB.getPesanan();
-  $('stPesanan').textContent = PESANAN_ADMIN.filter(p=>!['Selesai','Dibatalkan'].includes(p.status)).length;
+  PESANAN_ADMIN = (await DB.getPesanan()).map(o => ({ ...o, status: formatStatus(o.status) }));
+  $('stPesanan').textContent = PESANAN_ADMIN.filter(p=>!['selesai','dibatalkan','ditolak'].includes(normalizeStatus(p.status))).length;
   renderPesananList();
+  renderPesananHistori();
   if(dashDari) renderDashboard(); else setDashRange('7');
 };
 
@@ -356,14 +541,15 @@ function renderDashboard(){
     const w=new Date(o.waktu).getTime();
     return w>=dashDari.getTime() && w<=dashSampai.getTime();
   });
-  const selesai = dalamRange.filter(o=>o.status==='Selesai');
-  const batal = dalamRange.filter(o=>o.status==='Dibatalkan');
+  const selesai = dalamRange.filter(o=>normalizeStatus(o.status)==='selesai');
+  const batal = dalamRange.filter(o=>normalizeStatus(o.status)==='dibatalkan');
+  const ditolak = dalamRange.filter(o=>normalizeStatus(o.status)==='ditolak');
   const omzet = selesai.reduce((s,o)=>s+Number(o.total||0),0);
   const rata = selesai.length ? Math.round(omzet/selesai.length) : 0;
   $('dOmzet').textContent = rp(omzet);
   $('dJumlah').textContent = selesai.length;
   $('dRata').textContent = rp(rata);
-  $('dBatal').textContent = batal.length;
+  $('dBatal').textContent = batal.length + ditolak.length;
 
   const agg={};
   selesai.forEach(o=>(o.items||[]).forEach(i=>{
@@ -380,24 +566,30 @@ function renderDashboard(){
 }
 function renderPesananList(){
   const el=$('admPesananList'); if(!el) return;
-  if(!PESANAN_ADMIN.length){ el.innerHTML=`<div class="kosong" style="padding:30px 20px"><div class="em">📭</div><p>Belum ada pesanan masuk.</p></div>`; return; }
-  el.innerHTML = PESANAN_ADMIN.map(o=>{
-    const next = DB.STATUS_FLOW[DB.STATUS_FLOW.indexOf(o.status)+1];
-    const bisaBatal = !['Selesai','Dibatalkan'].includes(o.status);
+  const aktif = PESANAN_ADMIN.filter(o=>!['selesai','dibatalkan','ditolak'].includes(normalizeStatus(o.status)));
+  if(!aktif.length){ el.innerHTML=`<div class="kosong" style="padding:30px 20px"><div class="em">📭</div><p>Tidak ada pesanan aktif saat ini.</p></div>`; return; }
+  const statusFlowNormalized = DB.STATUS_FLOW.map(normalizeStatus);
+  el.innerHTML = aktif.map(o=>{
+    const next = DB.STATUS_FLOW[statusFlowNormalized.indexOf(normalizeStatus(o.status))+1];
+    const bisaBatal = !['selesai','dibatalkan','ditolak'].includes(normalizeStatus(o.status));
     return `<div class="pesanan-item">
-      <div class="pi-head"><b>${o.kode}</b><span class="status-pill status-${o.status}">${o.status}</span></div>
+      <div class="pi-head"><b>${o.kode}</b><span class="status-pill status-${normalizeStatus(o.status)}">${formatStatus(o.status)}</span></div>
       <div class="pi-info">${o.nama||'-'} · ${o.hp||'-'} · ${o.metode==='antar'?'Diantar':'Ambil'}</div>
       <div class="pi-items">${(o.items||[]).map(i=>i.qty+'× '+i.nama).join(' · ')}</div>
       <div class="pi-total">${rp(o.total)}</div>
       <div class="pi-actions">
         ${next?`<button class="maju" data-maju="${o.id}|${next}">Tandai ${next}</button>`:''}
-        ${bisaBatal?`<button class="batal" data-batal="${o.id}">Batalkan</button>`:''}
+        ${bisaBatal?`<button class="selesai" data-selesai="${o.id}">Selesai</button><button class="tolak" data-tolak="${o.id}">Tolak</button><button class="batal" data-batal="${o.id}">Batalkan</button>`:''}
       </div>
     </div>`;
   }).join('');
   document.querySelectorAll('#admPesananList [data-maju]').forEach(b=>b.onclick=()=>{
     const [id,status]=b.dataset.maju.split('|');
     ubahStatusUI(+id,status);
+  });
+  document.querySelectorAll('#admPesananList [data-selesai]').forEach(b=>b.onclick=()=>{
+    const id = +b.dataset.selesai;
+    ubahStatusUI(id,'Selesai');
   });
   document.querySelectorAll('#admPesananList [data-batal]').forEach(b=>b.onclick=()=>{
     const o=PESANAN_ADMIN.find(x=>String(x.id)===b.dataset.batal);
@@ -409,6 +601,18 @@ function renderPesananList(){
         toast('Pesanan dibatalkan ✓');
         await refreshPesananAdmin();
       }catch(e){ toast('Gagal membatalkan'); console.error(e); }
+    });
+  });
+  document.querySelectorAll('#admPesananList [data-tolak]').forEach(b=>b.onclick=()=>{
+    const o=PESANAN_ADMIN.find(x=>String(x.id)===b.dataset.tolak);
+    if(!o) return;
+    bukaFormTolak(o, async(alasan)=>{
+      try{
+        await DB.ubahStatusPesanan(o.id,'Ditolak');
+        tolakKeWhatsApp(o,alasan);
+        toast('Pesanan ditolak ✓');
+        await refreshPesananAdmin();
+      }catch(e){ toast('Gagal tolak pesanan'); console.error(e); }
     });
   });
 }
