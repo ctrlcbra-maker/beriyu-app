@@ -108,7 +108,7 @@ function renderKasir(){
       <div class="kasir-panel">
         <div class="section-title">Pilih produk cepat</div>
         ${aktifMenu.length ? aktifMenu.map(m=>`
-          <div class="kasir-produk"><div><b>${m.nama}</b><div class="kap">${rp(hargaFinal(m))}</div></div><button data-kadd="${m.id}">Tambah</button></div>`).join('') : '<div class="kosong"><p>Belum ada menu aktif.</p></div>'}
+          <div class="kasir-produk"><div><b>${m.nama}</b><div class="kap">${rp(hargaFinal(m))}</div></div><button class="btn icon" data-kadd="${m.id}">+</button></div>`).join('') : '<div class="kosong"><p>Belum ada menu aktif.</p></div>'}
         <div class="section-title" style="margin-top:16px">Input manual item</div>
         <div class="f-row"><input class="inp" id="kasirManualNama" placeholder="Nama item"></div>
         <div class="f-row"><input class="inp" id="kasirManualHarga" inputmode="numeric" placeholder="Harga (Rp)"></div>

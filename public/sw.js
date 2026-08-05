@@ -1,5 +1,5 @@
 // Service worker sederhana — cache app shell agar bisa dibuka saat offline.
-const CACHE = 'beriyu-v2';
+const CACHE = 'beriyu-v3';
 const ASSETS = [
   '/', '/index.html',
   '/css/style.css',

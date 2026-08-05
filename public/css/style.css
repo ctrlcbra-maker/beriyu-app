@@ -51,10 +51,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .kartu{background:var(--putih);border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--garis);display:flex;flex-direction:column;position:relative}
 .kartu .foto{aspect-ratio:1/1;position:relative;background:var(--krem-tua)}
 .kartu .foto .badge{position:absolute;top:8px;left:8px;background:var(--kayu);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;letter-spacing:.3px}
-.kartu .isi{padding:11px 12px 13px;display:flex;flex-direction:column;flex:1}
-.kartu h3{font-size:14px;font-weight:700;line-height:1.25;margin-bottom:3px}
-.kartu .desk{font-size:11px;color:var(--abu);line-height:1.35;margin-bottom:9px;flex:1}
-.kartu .baris{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.kartu .isi{padding:12px 14px 14px;display:flex;flex-direction:column;flex:1}
+.kartu h3{font-size:14px;font-weight:700;line-height:1.2;margin-bottom:4px}
+.kartu .desk{font-size:12px;color:var(--abu);line-height:1.4;margin-bottom:10px;flex:1}
+.kartu .baris{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto}
 .harga{font-family:var(--font-judul);font-weight:600;font-size:15px;color:var(--hutan)}
 .harga s{font-size:11px;color:var(--abu);font-weight:400;margin-right:4px}
 .tambah{width:32px;height:32px;border-radius:10px;background:var(--hutan);color:var(--krem);font-size:20px;font-weight:600;display:grid;place-items:center;line-height:0;transition:transform .12s}
@@ -81,14 +81,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 .d-foto{aspect-ratio:16/11;margin:6px 16px 0;border-radius:18px;overflow:hidden;background:var(--krem-tua)}
 .d-isi{padding:16px}
-.d-isi h2{font-family:var(--font-judul);font-weight:600;font-size:23px;line-height:1.15}
+.d-isi h2{font-family:var(--font-judul);font-weight:600;font-size:21px;line-height:1.2;margin-bottom:4px}
 .d-isi .kat{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--kayu);margin-bottom:6px}
-.d-isi p{font-size:13px;color:var(--abu);line-height:1.5;margin:10px 0 16px}
-.qty{display:flex;align-items:center;gap:16px;justify-content:center;margin:8px 0 18px}
-.qty button{width:44px;height:44px;border-radius:14px;background:var(--putih);border:1px solid var(--garis);font-size:22px;color:var(--hutan);display:grid;place-items:center}
-.qty span{font-family:var(--font-judul);font-weight:600;font-size:22px;min-width:30px;text-align:center}
+.d-isi p{font-size:14px;color:var(--abu);line-height:1.6;margin:8px 0 14px}
+.qty{display:flex;align-items:center;gap:10px;justify-content:center;margin:8px 0 14px}
+.qty button{width:36px;height:36px;border-radius:12px;background:var(--putih);border:1px solid var(--garis);font-size:18px;color:var(--hutan);display:grid;place-items:center}
+.qty span{font-family:var(--font-judul);font-weight:600;font-size:17px;min-width:24px;text-align:center}
 
-.btn{width:100%;background:var(--hutan);color:var(--krem);font-weight:700;font-size:15px;padding:16px;border-radius:15px;box-shadow:var(--sh);transition:transform .1s}
+.btn{width:100%;background:var(--hutan);color:var(--krem);font-weight:700;font-size:15px;padding:14px 16px;border-radius:15px;box-shadow:var(--sh);transition:transform .1s}
+.btn.icon{width:34px;height:34px;padding:0;font-size:20px;border-radius:12px;display:grid;place-items:center;min-width:0}
 .btn:active{transform:scale(.98)}
 .btn.kayu{background:var(--kayu)}
 .btn.wa{background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px}
@@ -131,38 +132,47 @@ textarea.inp{resize:none;min-height:64px}
 .hint{font-size:12px;padding:0 16px;margin-top:-4px;margin-bottom:8px}
 .hint.ok{color:var(--sukses)} .hint.no{color:#c0392b}
 
-.admin-wrap{padding:16px 16px 40px}
-.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
-.stat{background:var(--putih);border:1px solid var(--garis);border-radius:16px;padding:15px;box-shadow:var(--sh)}
-.stat .v{font-family:var(--font-judul);font-weight:700;font-size:24px;color:var(--hutan)}
-.stat .l{font-size:11px;color:var(--abu);font-weight:600;margin-top:2px}
-.adm-sect{background:var(--putih);border:1px solid var(--garis);border-radius:16px;padding:4px 4px 8px;margin-bottom:16px;box-shadow:var(--sh);overflow:hidden}
-.adm-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 10px}
-.adm-head h3{font-family:var(--font-judul);font-size:16px;font-weight:600}
-.adm-add{font-size:12px;font-weight:700;color:var(--krem);background:var(--hutan);padding:7px 13px;border-radius:10px}
-.adm-item{display:flex;gap:11px;align-items:center;padding:9px 12px;border-top:1px solid var(--garis)}
+.admin-wrap{padding:18px 16px 36px}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--putih);border:1px solid var(--garis);border-radius:18px;padding:16px;box-shadow:var(--sh)}
+.stat .v{font-family:var(--font-judul);font-weight:700;font-size:22px;color:var(--hutan)}
+.stat .l{font-size:12px;color:var(--abu);font-weight:600;margin-top:4px}
+.adm-sect{background:var(--putih);border:1px solid var(--garis);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
+.adm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 10px}
+.adm-head h3{font-family:var(--font-judul);font-size:16px;font-weight:600;margin:0}
+.adm-add{font-size:12px;font-weight:700;color:var(--krem);background:var(--hutan);padding:8px 12px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:42px;min-height:38px}
+.adm-add.icon{padding:0;width:38px;height:38px;font-size:20px;border-radius:12px;min-width:38px}
+.adm-head{flex-wrap:wrap}
+.adm-item{display:flex;gap:11px;align-items:center;padding:10px 12px;border-top:1px solid var(--garis)}
+.adm-item:first-child{padding-top:0}
+.admin-wrap > button.btn.ghost{margin-top:10px}
+
 .adm-item .af{width:46px;height:46px;border-radius:11px;overflow:hidden;flex-shrink:0;background:var(--krem-tua)}
 .adm-item .an{font-size:13px;font-weight:700}
 .adm-item .ap{font-size:12px;color:var(--hutan);font-weight:600;margin-top:1px}
 .adm-item .actions{margin-left:auto;display:flex;gap:6px;align-items:center}
 .adm-item .actions button{width:32px;height:32px;border-radius:9px;background:var(--krem);display:grid;place-items:center;font-size:15px}
 .tog{width:40px;height:23px;border-radius:12px;background:var(--garis);position:relative;transition:background .2s;flex-shrink:0}
-.kasir-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;padding:0 14px 12px}
-.kasir-panel{background:var(--putih);border:1px solid var(--garis);border-radius:16px;padding:12px}
-.kasir-panel .section-title{font-size:13px;font-weight:700;color:var(--hutan);margin-bottom:10px}
-.kasir-produk{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--garis)}
+.kasir-grid{display:grid;grid-template-columns:1.15fr .95fr;gap:14px;padding:0 14px 12px}
+.kasir-panel{background:var(--putih);border:1px solid var(--garis);border-radius:18px;padding:18px}
+.kasir-panel .section-title{font-size:13px;font-weight:700;color:var(--hutan);margin-bottom:12px}
+.kasir-produk{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--garis)}
 .kasir-produk:first-child{border-top:none}
-.kasir-produk b{font-size:13px}
-.kasir-produk .kap{font-size:12px;color:var(--abu);margin-top:3px}
-.kasir-produk button{padding:7px 12px;background:var(--hutan);color:var(--krem);border-radius:11px;font-size:12px}
-.kasir-cart{display:grid;gap:8px}
-.kasir-item{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-top:1px solid var(--garis)}
+.kasir-produk > div{min-width:0}
+.kasir-produk b{font-size:14px;line-height:1.3;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.kasir-produk .kap{font-size:12px;color:var(--abu);margin-top:4px}
+.kasir-produk button{width:34px;height:34px;background:var(--hutan);color:var(--krem);border-radius:12px;font-size:20px;display:grid;place-items:center;line-height:1;box-shadow:var(--sh)}
+.kasir-cart{display:grid;gap:10px}
+.kasir-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 0;border-top:1px solid var(--garis);align-items:center}
 .kasir-item:first-child{border-top:none}
-.kasir-item .info{display:grid;gap:4px}
-.kasir-item .qty{display:flex;gap:6px;align-items:center}
-.kasir-item .qty button{width:28px;height:28px;border-radius:9px;background:var(--krem);border:none;font-size:16px}
-.kasir-summary{margin-top:12px;padding-top:10px;border-top:1px solid var(--garis)}
-.kasir-summary .row{display:flex;justify-content:space-between;font-size:13px;color:var(--abu);margin-bottom:6px}
+.kasir-item .info{display:grid;gap:4px;min-width:0}
+.kasir-item .info b{font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
+.kasir-item .kap{font-size:12px;color:var(--abu);margin-top:2px;word-break:break-word}
+.kasir-item .qty{display:flex;gap:8px;align-items:center}
+.kasir-item .qty button{width:30px;height:30px;border-radius:9px;background:var(--krem);border:none;font-size:16px}
+.kasir-item .qty b{min-width:18px;text-align:center;font-size:14px}
+.kasir-summary{margin-top:16px;padding-top:14px;border-top:1px solid var(--garis)}
+.kasir-summary .row{display:flex;justify-content:space-between;font-size:13px;color:var(--abu);margin-bottom:8px}
 .kasir-summary .row.total{font-size:15px;font-weight:700;color:var(--arang);margin-top:6px}
 .kasir-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .kasir-actions .btn{flex:1 1 100%;}
