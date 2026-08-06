@@ -562,6 +562,69 @@ function renderDashboard(){
       <div class="tr-bar"><div class="tr-fill" style="width:${maxQty?Math.round(v.qty/maxQty*100):0}%"></div></div>
     </div>`).join('') : `<p style="font-size:12px;color:var(--abu);padding:2px">Belum ada pesanan selesai di rentang ini.</p>`;
 }
+// --- buka daftar pesanan berdasarkan status (selesai / dibatalkan(+ditolak)) ---
+window.openOrders = function(kind){
+  // kind: 'selesai' | 'dibatalkan'
+  const isBatal = kind==='dibatalkan';
+  const list = PESANAN_ADMIN.filter(o=>{
+    const s = normalizeStatus(o.status);
+    if(isBatal) return s==='dibatalkan' || s==='ditolak';
+    return s=== 'selesai';
+  });
+  renderOrdersSheet(kind,list);
+};
+
+function renderOrdersSheet(kind,list){
+  const title = kind==='dibatalkan' ? 'Pesanan dibatalkan / ditolak' : 'Pesanan selesai';
+  if(!list || !list.length){
+    $('formKonten').innerHTML = `<div class="sect-judul" style="padding:8px 16px 4px">${title}</div><div style="padding:16px"><div class="kosong"><div class="em">📦</div><p>Tidak ada pesanan di kategori ini.</p></div></div>`;
+    bukaSheet('sheetForm'); return;
+  }
+  const rows = list.map(o=>{
+    const w=new Date(o.waktu);
+    return `<div class="adm-item pesanan-row" style="align-items:flex-start">
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>${o.kode}</b><span class="status-pill status-${normalizeStatus(o.status)}">${o.status}</span></div>
+        <div class="pi-info" style="color:var(--abu);font-size:13px">${o.nama||'-'} · ${o.hp||'-'} · ${o.metode||'-'}</div>
+        <div class="pi-items" style="margin-top:6px">${(o.items||[]).map(i=>i.qty+'× '+i.nama).join(' · ')}</div>
+        <div style="margin-top:6px;font-weight:700;color:var(--hutan)">${rp(o.total)}</div>
+        <div class="pi-meta" style="font-size:12px;color:var(--abu);margin-top:6px">${w.toLocaleDateString('id-ID')} ${w.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div style="margin-left:12px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn" data-edit-order="${o.id}">✏️ Edit</button>
+        <button class="btn ghost" data-del-order="${o.id}">🗑️ Hapus</button>
+      </div>
+    </div>`; }).join('');
+  $('formKonten').innerHTML = `<div class="sect-judul" style="padding:8px 16px 4px">${title}</div><div style="padding:10px 16px;display:flex;flex-direction:column;gap:10px">${rows}</div>`;
+  document.querySelectorAll('[data-edit-order]').forEach(b=>b.onclick=()=>{ const id= +b.dataset.editOrder; const o = PESANAN_ADMIN.find(x=>x.id===id); if(o) bukaFormEditPesanan(o); });
+  document.querySelectorAll('[data-del-order]').forEach(b=>b.onclick=()=>{ const id= +b.dataset.delOrder; if(confirm('Hapus pesanan ini?')){ DB.hapusPesanan(id).then(()=>{ toast('Pesanan dihapus'); refreshPesananAdmin(); }).catch(e=>{console.error(e);toast('Gagal hapus pesanan'); }); }});
+  bukaSheet('sheetForm');
+}
+
+function bukaFormEditPesanan(o){
+  const statusOptions = Array.from(new Set([].concat(DB.STATUS_FLOW, ['Dibatalkan','Ditolak'])));
+  $('formKonten').innerHTML = `
+    <div class="sect-judul" style="padding:8px 16px 4px">Edit pesanan ${o.kode}</div>
+    <div style="padding:0 16px">
+      <div class="f-label">Nama pelanggan</div>
+      <input class="inp" id="editNama" value="${(o.nama||'').replace(/"/g,'&quot;')}">
+      <div class="f-label">No. WA</div>
+      <input class="inp" id="editHp" value="${(o.hp||'').replace(/"/g,'&quot;')}">
+      <div class="f-label">Alamat</div>
+      <input class="inp" id="editAlamat" value="${(o.alamat||'').replace(/"/g,'&quot;')}">
+      <div class="f-label">Catatan</div>
+      <textarea class="inp" id="editCatatan">${(o.catatan||'')}</textarea>
+      <div class="f-label">Status</div>
+      <select class="inp" id="editStatus">${statusOptions.map(s=>`<option value="${s}" ${normalizeStatus(o.status)===normalizeStatus(s)?'selected':''}>${s}</option>`).join('')}</select>
+      <div style="margin-top:12px;display:flex;gap:8px"><button class="btn" id="saveOrderEdit">Simpan</button><button class="btn ghost" id="cancelOrderEdit">Batal</button></div>
+    </div>`;
+  $('cancelOrderEdit').onclick = ()=>{tutupSemua();};
+  $('saveOrderEdit').onclick = async ()=>{
+    const payload = { nama: $('editNama').value.trim(), hp: $('editHp').value.trim(), alamat: $('editAlamat').value.trim(), catatan: $('editCatatan').value.trim(), status: $('editStatus').value };
+    try{ await DB.updatePesanan(o.id, payload); toast('Perubahan disimpan'); tutupSemua(); await refreshPesananAdmin(); }catch(e){ console.error(e); toast('Gagal simpan perubahan'); }
+  };
+  bukaSheet('sheetForm');
+}
 function renderPesananList(){
   const el=$('admPesananList'); if(!el) return;
   const aktif = PESANAN_ADMIN.filter(o=>!['selesai','dibatalkan','ditolak'].includes(normalizeStatus(o.status)));

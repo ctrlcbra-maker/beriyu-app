@@ -141,6 +141,18 @@ export async function ubahStatusPesanan(id, status) {
   if (error) throw error;
 }
 
+export async function updatePesanan(id, patch) {
+  if (MODE_DEMO) { const p = DEMO_PESANAN.find(x => x.id === id); if (p) Object.assign(p, patch); return; }
+  const { error } = await sb.from('pesanan').update(patch).eq('id', id);
+  if (error) throw error;
+}
+
+export async function hapusPesanan(id) {
+  if (MODE_DEMO) { const idx = DEMO_PESANAN.findIndex(x => x.id === id); if (idx > -1) DEMO_PESANAN.splice(idx, 1); return; }
+  const { error } = await sb.from('pesanan').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // hapus histori pesanan lebih dari 30 hari (fallback client-side; utamanya
 // dijalankan otomatis oleh pg_cron di database, lihat schema.sql)
 export async function hapusPesananLama() {
